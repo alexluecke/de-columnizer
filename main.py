@@ -9,7 +9,7 @@ def find_par_idxs(lines):
     par_idxs = [0]
     # Don't include very last line of file as new paragraph
     for idx in xrange(0, len(lines)-1):
-        if re.sub("[|+]", "", lines[idx]).strip() == '':
+        if re.sub("[|\-+]", "", lines[idx]).strip() == '':
             par_idxs.append(idx)
     return par_idxs
 
@@ -22,6 +22,7 @@ def de_columnize(lines):
 
     par_idxs = find_par_idxs(lines)
 
+    print par_idxs
     for idx in par_idxs:
         captured_boxes[idx] = []
 
@@ -29,7 +30,7 @@ def de_columnize(lines):
 
     for idx in reversed(range(len(lines))):
         if start_capture:
-            if re.match(".*\+-+\+.*", lines[idx]):
+            if re.match("[|]?.*\+-+\+.*[|]?", lines[idx]):
                 box_text = "(" + box_text.strip() + ")"
                 if idx < next_par_idx:
                     next_par_idx = par_idxs.pop()
@@ -42,22 +43,22 @@ def de_columnize(lines):
                 box_text = ''
                 start_capture = True
 
-        lines[idx] = re.sub("[+|][^+|]*[+|]", "", lines[idx])
-        lines[idx] = re.sub("(^ *| *$)", "", lines[idx]).strip()
+        lines[idx] = re.sub("[|][^|]*[|]", "", lines[idx])
+        lines[idx] = re.sub("(\| *)?\+-+\+( *\|)?", "", lines[idx]).strip()
 
         prefix = ''
         if next_par_idx == idx and not start_capture:
             prefix = " ".join(captured_boxes[next_par_idx]) + " "
 
         if lines[idx][-1:] == '-':
-            fixed = prefix + lines[idx][:-1] + '' + fixed.strip()
+            fixed = prefix + lines[idx][:-1] + fixed
         else:
             fixed = prefix + lines[idx] + ' ' + fixed
 
         if next_par_idx == idx and idx != 0:
             fixed = "\n" + fixed
 
-    return fixed
+    return re.sub(' +', ' ', fixed).strip()
 
 def capture_box_line(line):
     return re.sub(".*\|([^|]*)\|.*", "\\1", line).strip()
