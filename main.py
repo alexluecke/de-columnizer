@@ -3,80 +3,64 @@ import argparse
 
 def start(filename):
     lines = open(filename).read().split('\n')
-    for item in de_columnize(lines[1:]):
-        print item
+    print de_columnize(lines[1:])
+
+def find_par_idxs(lines):
+    par_idxs = [0]
+    # Don't include very last line of file as new paragraph
+    for idx in xrange(0, len(lines)-1):
+        if re.sub("[|+]", "", lines[idx]).strip() == '':
+            par_idxs.append(idx)
+    return par_idxs
 
 def de_columnize(lines):
 
-    chunks = 0
-    joined = ['']
-    originals = lines
+    start_capture = False
+    fixed = ''
+    box_text = ''
+    captured_boxes = {}
 
-    prefix_data = handle_box(lines)
+    par_idxs = find_par_idxs(lines)
 
-    paridx = 0
-    for idx in xrange(0, len(lines)):
+    for idx in par_idxs:
+        captured_boxes[idx] = []
+
+    next_par_idx = par_idxs.pop()
+
+    for idx in reversed(range(len(lines))):
+        if start_capture:
+            if re.match(".*\+-+\+.*", lines[idx]):
+                box_text = "(" + box_text.strip() + ")"
+                if idx < next_par_idx:
+                    next_par_idx = par_idxs.pop()
+                captured_boxes[next_par_idx].insert(0, box_text)
+                start_capture = False
+            else:
+                box_text = capture_box_line(lines[idx]) + ' ' + box_text
+        else:
+            if re.match(".*\+-+\+.*", lines[idx]):
+                box_text = ''
+                start_capture = True
+
         lines[idx] = re.sub("[+|][^+|]*[+|]", "", lines[idx])
         lines[idx] = re.sub("(^ *| *$)", "", lines[idx]).strip()
 
-        if lines[idx] == '':
-            paridx = idx+1
-            lines[idx] = '\n'
-            continue
+        prefix = ''
+        if next_par_idx == idx and not start_capture:
+            prefix = " ".join(captured_boxes[next_par_idx]) + " "
 
-        temp_idx = idx
-        for item in prefix_data:
-            if item['line'] == idx:
-                while idx > paridx:
-                    idx = idx - 1
-                lines[idx] = item['value'] + " " + lines[idx]
-        idx = temp_idx
-
-    for line in lines:
-        if joined[chunks][-1:] == '-':
-            joined[chunks] = joined[chunks][:-1] + line
-        elif joined[chunks][-1:] == '\n':
-            joined[chunks] = joined[chunks] + line
+        if lines[idx][-1:] == '-':
+            fixed = prefix + lines[idx][:-1] + '' + fixed.strip()
         else:
-            joined[chunks] = joined[chunks] + ' ' + line
+            fixed = prefix + lines[idx] + ' ' + fixed
 
-    for idx in xrange(len(joined)):
-        joined[idx] = joined[idx].strip()
+        if next_par_idx == idx and idx != 0:
+            fixed = "\n" + fixed
 
-    return filter(lambda x: x.strip() != '', joined)
+    return fixed
 
-def handle_box(lines):
-
-    capture = []
-    count = 0
-    start_capture = False
-    stop_capture = False
-
-    for idx in xrange(len(lines)):
-
-        if re.match(".*\+-+\+.*", lines[idx]):
-
-            if start_capture:
-                capture[0]['value'] = filter(
-                    lambda x: x.strip() != '',
-                    capture[0]['value']
-                )
-                start_capture = False
-            else:
-                capture.insert(0, { 'line': 0, 'value': [] })
-                capture[0]['line'] = idx
-                start_capture = True
-                continue
-
-        if start_capture:
-            clean = re.sub(".*\|([^|]*)\|.*", "\\1", lines[idx]).strip()
-            capture[0]['value'].append(clean)
-
-    for idx in xrange(len(capture)):
-        capture[idx]['value'] = " ".join(capture[idx]['value'])
-        capture[idx]['value'] = "(" + capture[idx]['value'] + ")"
-
-    return capture
+def capture_box_line(line):
+    return re.sub(".*\|([^|]*)\|.*", "\\1", line).strip()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='')
