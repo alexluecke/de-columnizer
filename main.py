@@ -10,6 +10,7 @@ def de_columnize(lines):
 
     chunks = 0
     joined = ['']
+    originals = lines
 
     prefix_data = handle_box(lines)
 
@@ -56,7 +57,6 @@ def handle_box(lines):
         if re.match(".*\+-+\+.*", lines[idx]):
 
             if start_capture:
-                capture[0]['line'] = idx
                 capture[0]['value'] = filter(
                     lambda x: x.strip() != '',
                     capture[0]['value']
@@ -64,6 +64,7 @@ def handle_box(lines):
                 start_capture = False
             else:
                 capture.insert(0, { 'line': 0, 'value': [] })
+                capture[0]['line'] = idx
                 start_capture = True
                 continue
 
