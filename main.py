@@ -5,7 +5,6 @@ def start(filename):
     lines = open(filename).read().split('\n')
     for item in de_columnize(lines[1:]):
         print item
-        break
 
 def de_columnize(lines):
 
@@ -47,32 +46,30 @@ def de_columnize(lines):
 
 def handle_box(lines):
 
+    capture = []
     count = 0
     start_capture = False
     stop_capture = False
-    capture = []
 
     for idx in xrange(len(lines)):
-
-        length = len(capture) - 1
 
         if re.match(".*\+-+\+.*", lines[idx]):
 
             if start_capture:
-                capture[length]['line'] = idx
-                capture[length]['value'] = filter(
+                capture[0]['line'] = idx
+                capture[0]['value'] = filter(
                     lambda x: x.strip() != '',
-                    capture[length]['value']
+                    capture[0]['value']
                 )
                 start_capture = False
             else:
-                capture.append({ 'line': 0, 'value': [] })
+                capture.insert(0, { 'line': 0, 'value': [] })
                 start_capture = True
                 continue
 
         if start_capture:
-            clean = re.sub(".*\|([^|]*)\|.*", "\\1", lines[idx])
-            capture[length]['value'].append(clean.strip())
+            clean = re.sub(".*\|([^|]*)\|.*", "\\1", lines[idx]).strip()
+            capture[0]['value'].append(clean)
 
     for idx in xrange(len(capture)):
         capture[idx]['value'] = " ".join(capture[idx]['value'])
