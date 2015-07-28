@@ -22,7 +22,6 @@ def de_columnize(lines):
 
     par_idxs = find_par_idxs(lines)
 
-    print par_idxs
     for idx in par_idxs:
         captured_boxes[idx] = []
 
